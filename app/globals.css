@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 30 50% 98%;
+    --foreground: 25 30% 15%;
+    --card: 30 40% 99%;
+    --card-foreground: 25 30% 15%;
+    --popover: 30 40% 99%;
+    --popover-foreground: 25 30% 15%;
+    --primary: 172 40% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 30% 93%;
+    --secondary-foreground: 25 30% 20%;
+    --muted: 30 20% 94%;
+    --muted-foreground: 25 10% 45%;
+    --accent: 35 70% 55%;
+    --accent-foreground: 25 30% 15%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 20% 88%;
+    --input: 30 20% 88%;
+    --ring: 172 40% 40%;
+    --chart-1: 172 40% 40%;
+    --chart-2: 35 70% 55%;
+    --chart-3: 200 30% 50%;
+    --chart-4: 15 60% 60%;
+    --chart-5: 150 30% 50%;
+    --radius: 0.75rem;
+    --sidebar-background: 30 40% 97%;
+    --sidebar-foreground: 25 30% 25%;
+    --sidebar-primary: 172 40% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 30% 93%;
+    --sidebar-accent-foreground: 25 30% 20%;
+    --sidebar-border: 30 20% 88%;
+    --sidebar-ring: 172 40% 40%;
+    --safe: 172 40% 40%;
+    --safe-foreground: 0 0% 100%;
+    --warning: 35 70% 55%;
+    --warning-foreground: 25 30% 15%;
+    --emergency: 0 65% 55%;
+    --emergency-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
