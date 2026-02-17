@@ -1,34 +1,52 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { MoodPicker } from "@/components/mood-picker";
-import { saveCheckIn } from "@/lib/stubs";
 import type { Mood } from "@/lib/types";
 import { Check, Wind } from "lucide-react";
 import Link from "next/link";
 
 export default function CheckInPage() {
-  const router = useRouter();
   const [mood, setMood] = useState<Mood | null>(null);
   const [stress, setStress] = useState(5);
   const [energy, setEnergy] = useState(5);
   const [note, setNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!mood) return;
+
     setLoading(true);
-    await saveCheckIn({
-      mood,
-      stressLevel: stress,
-      energyLevel: energy,
-      note: note || undefined,
-    });
-    setLoading(false);
-    setSubmitted(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/checkins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+
+        body: JSON.stringify({
+          mood,
+          stressLevel: stress,
+          energyLevel: energy,
+          note: note || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const msg = await res.json().catch(() => null);
+        throw new Error(msg?.error ?? `Error HTTP ${res.status}`);
+      }
+
+      setSubmitted(true);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message ?? "Error al guardar el check-in");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (submitted) {
@@ -60,6 +78,11 @@ export default function CheckInPage() {
               Volver al inicio
             </Link>
           </div>
+
+          <p className="mt-4 text-xs text-muted-foreground">
+            Tip: al volver al inicio y refrescar, verás tu check-in reflejado en
+            “Tu semana”.
+          </p>
         </div>
       </div>
     );
@@ -126,7 +149,7 @@ export default function CheckInPage() {
           </div>
         </div>
 
-        {/* Note */}
+        {/* Note (por ahora solo UI) */}
         <div>
           <label
             htmlFor="note"
@@ -143,6 +166,12 @@ export default function CheckInPage() {
             className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            {error}
+          </div>
+        )}
 
         <button
           type="submit"
