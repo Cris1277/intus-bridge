@@ -21,6 +21,7 @@ type CheckIn = {
   mood: Mood;
   stressLevel: number;
   energyLevel: number;
+  note?: string | null;
   createdAt: string;
 };
 
@@ -145,15 +146,65 @@ export default function AppHomePage() {
                   const moodInfo = getMoodInfo(ci.mood);
                   const height = (ci.stressLevel / maxStress) * 100;
 
+                  const tooltipDate = new Date(ci.createdAt).toLocaleDateString(
+                    "es-ES",
+                    {
+                      weekday: "long",
+                      day: "2-digit",
+                      month: "long",
+                    },
+                  );
+
+                  const tooltipText =
+                    (ci.note && ci.note.trim()) ||
+                    "Sin nota. Puedes añadir una nota en tu próximo check-in.";
+
                   return (
                     <div
                       key={ci.id}
-                      className="flex flex-1 flex-col items-center gap-2"
+                      className="relative group flex flex-1 flex-col items-center gap-2"
                     >
+                      {/* Tooltip */}
+                      <div
+                        className="pointer-events-none absolute -top-2 left-1/2 z-20 w-56 -translate-x-1/2 -translate-y-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground shadow-lg opacity-0 transition-opacity group-hover:opacity-100"
+                        role="tooltip"
+                        aria-hidden="true"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium capitalize">
+                            {tooltipDate}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {moodInfo.icon}
+                          </span>
+                        </div>
+
+                        <div className="mt-1 text-muted-foreground">
+                          Estrés:{" "}
+                          <span className="font-mono text-foreground">
+                            {ci.stressLevel}/10
+                          </span>{" "}
+                          · Energía:{" "}
+                          <span className="font-mono text-foreground">
+                            {ci.energyLevel}/10
+                          </span>
+                        </div>
+
+                        <div className="mt-2 leading-relaxed">
+                          {tooltipText}
+                        </div>
+
+                        {/* Flechita */}
+                        <div className="absolute left-1/2 top-full -translate-x-1/2 border-8 border-transparent border-t-border/80" />
+                        <div className="absolute left-1/2 top-full -translate-x-1/2 translate-y-[1px] border-8 border-transparent border-t-background" />
+                      </div>
+
+                      {/* Icon */}
                       <span className="text-xs text-muted-foreground">
                         {moodInfo.icon}
                       </span>
 
+                      {/* Bar */}
                       <div
                         className="relative w-full overflow-hidden rounded-t-md bg-muted"
                         style={{ height: "100px" }}
@@ -164,6 +215,7 @@ export default function AppHomePage() {
                         />
                       </div>
 
+                      {/* Day */}
                       <span className="text-xs text-muted-foreground">
                         {new Date(ci.createdAt).toLocaleDateString("es-ES", {
                           weekday: "short",
