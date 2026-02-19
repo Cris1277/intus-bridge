@@ -46,7 +46,7 @@ export function JournalCard({
         throw new Error(data?.error ?? "No se pudo eliminar la entrada");
       }
 
-      // ✅ update optimista: la quitamos de la lista sin refrescar manual
+      // update: la quitamos de la lista sin refrescar manual
       onDeleted?.(entry.id);
 
       setConfirmOpen(false);

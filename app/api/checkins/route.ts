@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Mood } from "@prisma/client";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth"; // ajusta si tu export se llama distinto
+import { authOptions } from "@/auth";
 
 async function requireUserId() {
   const session = await getServerSession(authOptions);

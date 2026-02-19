@@ -47,7 +47,7 @@ export const authOptions: NextAuthOptions = {
 
       // cuando llamas a useSession().update(...)
       if (trigger === "update" && session) {
-        // session aquí es el payload que mandas en update()
+        // session payload que mandas en update()
         if (typeof (session as any).name === "string")
           token.name = (session as any).name;
         if (typeof (session as any).email === "string")

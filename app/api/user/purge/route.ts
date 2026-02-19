@@ -30,16 +30,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Con tu schema, cascades cubren:
+    // Con nuestro schema, cascades cubren:
     // User -> JournalEntry, CheckIn, Conversation
     // Conversation -> Message
     if (!wipeDataOnly) {
-      // ✅ Borra TODO (datos + cuenta) vía cascada
+      // Borra TODO (datos + cuenta) vía cascada
       await prisma.user.delete({ where: { id: userId } });
       return NextResponse.json({ ok: true, deletedUser: true });
     }
 
-    // ✅ Mantener cuenta pero borrar todos los datos
+    // Mantener cuenta pero borrar todos los datos
     await prisma.$transaction(async (tx) => {
       // Mensajes se borran por cascade al borrar conversations, pero lo dejamos explícito por seguridad:
       await tx.message.deleteMany({

@@ -73,7 +73,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           confirm: "BORRAR",
-          wipeDataOnly: true, // ✅ no borra cuenta
+          wipeDataOnly: true, // no borra cuenta
         }),
       });
 
@@ -92,7 +92,7 @@ export default function SettingsPage() {
       setDeleteConfirm("");
 
       // (Opcional) refresca cualquier UI que dependa de datos (listados, charts)
-      // En tu caso, los listados cargan por fetch en cliente, así que al volver a esas pantallas ya verán vacío.
+      // En nuestro, los listados cargan por fetch en cliente, así que al volver a esas pantallas ya verán vacío.
     } catch (e: any) {
       setDeleteError(e?.message ?? "No se pudieron borrar los datos");
     } finally {
