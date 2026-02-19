@@ -1,26 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Mood } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth"; // ajusta si tu export se llama distinto
 
-function getDemoUserId() {
-  // TODO: reemplazar por auth (session.user.id)
-  return "u1";
+async function requireUserId() {
+  const session = await getServerSession(authOptions);
+
+  const userId = (session?.user as { id?: string })?.id;
+  if (!userId) return null;
+
+  return userId;
 }
 
 export async function GET(req: Request) {
-  const userId = getDemoUserId();
+  const userId = await requireUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { searchParams } = new URL(req.url);
-  const days = Number(searchParams.get("days") ?? "7");
+  const daysRaw = Number(searchParams.get("days") ?? "7");
+  const days = Number.isFinite(daysRaw)
+    ? Math.max(1, Math.min(daysRaw, 365))
+    : 7;
 
   const from = new Date();
-  from.setDate(from.getDate() - Math.max(1, Math.min(days, 365)));
+  from.setDate(from.getDate() - days);
 
   const checkIns = await prisma.checkIn.findMany({
-    where: {
-      userId,
-      createdAt: { gte: from },
-    },
+    where: { userId, createdAt: { gte: from } },
     orderBy: { createdAt: "asc" },
   });
 
@@ -28,7 +37,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const userId = getDemoUserId();
+  const userId = await requireUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const body = await req.json().catch(() => null);
   if (!body) {
@@ -44,7 +56,8 @@ export async function POST(req: Request) {
       ? body.note.trim().slice(0, 1000)
       : undefined;
 
-  if (!mood || !(mood in Mood)) {
+  // mood validation (robusta)
+  if (!mood || !Object.values(Mood).includes(mood)) {
     return NextResponse.json({ error: "Invalid mood" }, { status: 400 });
   }
 
@@ -68,7 +81,7 @@ export async function POST(req: Request) {
       mood,
       stressLevel,
       energyLevel,
-      note, // guarda la nota (requiere note String? en schema + migración)
+      note,
     },
   });
 

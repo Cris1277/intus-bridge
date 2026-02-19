@@ -4,20 +4,36 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Heart } from "lucide-react";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    // TODO: connect to auth backend
-    setTimeout(() => {
-      router.push("/app");
-    }, 500);
+    setError(null);
+
+    const result = await signIn("credentials", {
+      email: email.trim(),
+      password,
+      redirect: false,
+    });
+
+    setLoading(false);
+
+    if (result?.error) {
+      setError("Credenciales incorrectas");
+      return;
+    }
+
+    router.push("/app");
+    router.refresh();
   }
 
   return (
@@ -54,6 +70,7 @@ export default function LoginPage() {
                 required
               />
             </div>
+
             <div>
               <label
                 htmlFor="password"
@@ -71,6 +88,13 @@ export default function LoginPage() {
                 required
               />
             </div>
+
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}

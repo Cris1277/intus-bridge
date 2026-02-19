@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { currentUser } from "@/data/mock";
+import { useSession } from "next-auth/react";
 import { exportUserData, deleteUserData } from "@/lib/stubs";
 import {
   User,
@@ -14,6 +14,11 @@ import {
 } from "lucide-react";
 
 export default function SettingsPage() {
+  const { data: session, status } = useSession();
+  const user = session?.user as
+    | { id?: string; name?: string | null; email?: string | null }
+    | undefined;
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -28,7 +33,6 @@ export default function SettingsPage() {
     setExporting(true);
     await exportUserData();
     setExporting(false);
-    // TODO: trigger actual download
     alert("Datos exportados correctamente (mock)");
   }
 
@@ -39,6 +43,26 @@ export default function SettingsPage() {
     setDeleting(false);
     setShowDeleteDialog(false);
     alert("Datos borrados correctamente (mock)");
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="text-sm text-muted-foreground">Cargando ajustes…</div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <p className="text-sm text-muted-foreground">
+            Necesitas iniciar sesión para ver los ajustes.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -58,6 +82,7 @@ export default function SettingsPage() {
           <User className="h-5 w-5 text-muted-foreground" />
           <h2 className="text-lg font-semibold text-card-foreground">Perfil</h2>
         </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-foreground">
@@ -65,19 +90,30 @@ export default function SettingsPage() {
             </label>
             <input
               type="text"
-              defaultValue={currentUser.name}
+              defaultValue={user?.name ?? ""}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Tu nombre"
+              disabled
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              (Solo lectura por ahora)
+            </p>
           </div>
+
           <div>
             <label className="mb-1.5 block text-sm font-medium text-foreground">
               Email
             </label>
             <input
               type="email"
-              defaultValue={currentUser.email}
+              defaultValue={user?.email ?? ""}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="tu@email.com"
+              disabled
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              (Solo lectura por ahora)
+            </p>
           </div>
         </div>
       </section>

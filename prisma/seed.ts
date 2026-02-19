@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { Mood, ScenarioType, ToolType } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 /**
  * Seed idempotente:
@@ -10,13 +11,16 @@ import { Mood, ScenarioType, ToolType } from "@prisma/client";
  */
 async function main() {
   // 1) Usuario demo (mapeamos u1 -> user real)
+  const passwordHash = await bcrypt.hash("Password123!", 10);
+
   const user = await prisma.user.upsert({
     where: { email: "ana@ejemplo.com" },
-    update: { name: "Ana" },
+    update: { name: "Ana", passwordHash },
     create: {
       id: "u1", // mantenemos el id del mock para que cuadre con userId
       email: "ana@ejemplo.com",
       name: "Ana",
+      passwordHash,
     },
   });
 
@@ -402,7 +406,7 @@ async function main() {
       content:
         "Son las 2 de la mañana y sigo dando vueltas. Tengo demasiadas cosas en la cabeza: el proyecto, la situación con mi equipo, la presentación del viernes. Voy a intentar escribir aqui todo lo que me agobia para sacarlo de mi mente.",
       mood: Mood.stressed,
-      tags: ["estres", "insomnio", "trabajo"],
+      tags: ["estrés", "insomnio", "trabajo"],
       createdAt: new Date("2026-02-11T02:00:00Z"),
     },
     {

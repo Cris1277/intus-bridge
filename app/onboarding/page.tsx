@@ -6,7 +6,7 @@ import { Heart, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { SafetyBanner } from "@/components/safety-banner";
 
 const goals = [
-  { id: "stress", label: "Reducir estres" },
+  { id: "stress", label: "Reducir estrés" },
   { id: "anxiety", label: "Manejar ansiedad" },
   { id: "bullying", label: "Afrontar bullying" },
   { id: "limits", label: "Mejorar limites" },

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Home,
   BookOpen,
@@ -20,7 +19,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { currentUser } from "@/data/mock";
+import { useSession, signOut } from "next-auth/react";
 
 const navItems = [
   { href: "/app", label: "Inicio", icon: Home },
@@ -35,12 +34,14 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { data: session, status } = useSession();
+  const userName = session?.user?.name ?? session?.user?.email ?? "—";
 
   function handleLogout() {
     setSidebarOpen(false);
-    router.push("/");
+    signOut({ callbackUrl: "/" });
   }
 
   return (
@@ -82,6 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/app" && pathname.startsWith(item.href));
+
               return (
                 <li key={item.href}>
                   <Link
@@ -112,6 +114,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <LogOut className="h-4.5 w-4.5 shrink-0" />
             Cerrar sesión
           </button>
+
           <a
             href="tel:112"
             className="flex items-center gap-2 rounded-lg bg-emergency px-3 py-2.5 text-sm font-bold text-emergency-foreground transition-colors hover:opacity-90"
@@ -133,14 +136,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-6 w-6" />
           </button>
+
           <div className="flex-1">
             <p className="text-sm text-muted-foreground">
               Hola,{" "}
               <span className="font-semibold text-foreground">
-                {currentUser.name}
+                {status === "loading" ? "…" : userName}
               </span>
             </p>
           </div>
+
           <a
             href="tel:112"
             className="flex items-center gap-1.5 rounded-lg bg-emergency px-3 py-1.5 text-xs font-bold text-emergency-foreground transition-colors hover:opacity-90 lg:hidden"
