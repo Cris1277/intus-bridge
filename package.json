@@ -6,7 +6,9 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma migrate deploy && prisma generate && prisma db seed && next build"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -63,7 +65,8 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",
@@ -74,7 +77,6 @@
     "postcss": "^8.5",
     "prisma": "^6.19.2",
     "tailwindcss": "^3.4.17",
-    "ts-node": "^10.9.2",
     "typescript": "5.7.3"
   },
   "pnpm": {
