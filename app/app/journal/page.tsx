@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus, Search, BookOpen } from "lucide-react";
-import { journalEntries } from "@/data/mock";
 import { JournalCard } from "@/components/journal-card";
-import type { Mood } from "@/lib/types";
+import type { Mood, JournalEntry } from "@/lib/types";
 
 const moodFilters: { value: Mood | "all"; label: string }[] = [
   { value: "all", label: "Todos" },
@@ -18,20 +17,58 @@ const moodFilters: { value: Mood | "all"; label: string }[] = [
 ];
 
 export default function JournalListPage() {
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [search, setSearch] = useState("");
   const [moodFilter, setMoodFilter] = useState<Mood | "all">("all");
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch("/api/journal", { cache: "no-store" });
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          throw new Error(data?.error ?? `HTTP ${res.status}`);
+        }
+
+        if (!cancelled) setEntries(Array.isArray(data) ? data : []);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Error cargando el diario");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const filtered = useMemo(() => {
-    return journalEntries.filter((entry) => {
+    return entries.filter((entry) => {
       const matchesMood = moodFilter === "all" || entry.mood === moodFilter;
+
+      const q = search.trim().toLowerCase();
       const matchesSearch =
-        !search ||
-        entry.title.toLowerCase().includes(search.toLowerCase()) ||
-        entry.content.toLowerCase().includes(search.toLowerCase()) ||
-        entry.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()));
+        !q ||
+        entry.title.toLowerCase().includes(q) ||
+        entry.content.toLowerCase().includes(q) ||
+        entry.tags.some((t) => t.toLowerCase().includes(q));
+
       return matchesMood && matchesSearch;
     });
-  }, [search, moodFilter]);
+  }, [entries, search, moodFilter]);
+
+  const isEmpty = !loading && !error && entries.length === 0;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -82,21 +119,25 @@ export default function JournalListPage() {
         </div>
       </div>
 
-      {/* Entries */}
-      {filtered.length === 0 ? (
+      {/* States */}
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Cargando…</div>
+      ) : error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {error}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center rounded-xl border border-dashed border-border py-16 text-center">
           <BookOpen className="mb-3 h-10 w-10 text-muted-foreground/50" />
           <p className="text-sm font-medium text-foreground">
-            {journalEntries.length === 0
-              ? "Tu diario esta vacío"
-              : "No se encontraron entradas"}
+            {isEmpty ? "Tu diario esta vacío" : "No se encontraron entradas"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {journalEntries.length === 0
+            {isEmpty
               ? "Empieza escribiendo lo que sientes."
               : "Prueba con otros filtros o palabras."}
           </p>
-          {journalEntries.length === 0 && (
+          {isEmpty && (
             <Link
               href="/app/journal/new"
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
@@ -109,7 +150,13 @@ export default function JournalListPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {filtered.map((entry) => (
-            <JournalCard key={entry.id} entry={entry} />
+            <JournalCard
+              key={entry.id}
+              entry={entry}
+              onDeleted={(id) =>
+                setEntries((prev) => prev.filter((e) => e.id !== id))
+              }
+            />
           ))}
         </div>
       )}

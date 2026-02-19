@@ -1,10 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Lightbulb, Sparkles } from "lucide-react";
-import { journalEntries } from "@/data/mock";
+import { ArrowLeft, Lightbulb, Sparkles, Trash2 } from "lucide-react";
 import { getMoodInfo } from "@/components/mood-picker";
+import type { JournalEntry } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 // Mock insights
 const mockInsights = {
@@ -24,8 +26,77 @@ export default function JournalEntryPage({
 }: {
   params: Promise<{ entryId: string }>;
 }) {
+  const router = useRouter();
   const { entryId } = use(params);
-  const entry = journalEntries.find((e) => e.id === entryId);
+
+  const [entry, setEntry] = useState<JournalEntry | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Modal delete
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Carga entry
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+
+        const res = await fetch(`/api/journal/${entryId}`, {
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          throw new Error(data?.error ?? `HTTP ${res.status}`);
+        }
+
+        if (!cancelled) setEntry(data);
+      } catch {
+        if (!cancelled) setEntry(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [entryId]);
+
+  async function confirmDelete() {
+    try {
+      setDeleting(true);
+      setDeleteError(null);
+
+      const res = await fetch(`/api/journal/${entryId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? `HTTP ${res.status}`);
+      }
+
+      // Nos vamos al listado
+      router.push("/app/journal");
+      router.refresh();
+    } catch (e: any) {
+      setDeleteError(e?.message ?? "No se pudo eliminar la entrada");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="text-sm text-muted-foreground">Cargando…</div>
+      </div>
+    );
+  }
 
   if (!entry) {
     return (
@@ -50,13 +121,27 @@ export default function JournalEntryPage({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link
-        href="/app/journal"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Volver al diario
-      </Link>
+      <div className="mb-4 flex items-center justify-between">
+        <Link
+          href="/app/journal"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al diario
+        </Link>
+
+        <button
+          onClick={() => {
+            setDeleteError(null);
+            setConfirmOpen(true);
+          }}
+          className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          disabled={deleting}
+        >
+          <Trash2 className="h-4 w-4" />
+          Eliminar
+        </button>
+      </div>
 
       {/* Entry */}
       <article className="rounded-xl border border-border bg-card p-6">
@@ -111,7 +196,7 @@ export default function JournalEntryPage({
           </span>
         </div>
         <p className="mb-1 text-xs text-muted-foreground">
-          Respuestas generadas por IA. Usalas como apoyo, no como diagnóstico.
+          Respuestas generadas por IA. Úsalas como apoyo, no como diagnóstico.
         </p>
 
         <p className="mt-3 text-sm text-card-foreground leading-relaxed">
@@ -151,6 +236,20 @@ export default function JournalEntryPage({
           Crear plan de calma
         </button>
       </div>
+
+      {/* ✅ Modal bonito de borrado */}
+      <ConfirmDialog
+        open={confirmOpen}
+        title="¿Eliminar esta entrada?"
+        description="Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+        loading={deleting}
+        error={deleteError}
+        onClose={() => !deleting && setConfirmOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
