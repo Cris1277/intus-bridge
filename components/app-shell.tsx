@@ -37,10 +37,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { data: session, status } = useSession();
-  const userName = session?.user?.name ?? session?.user?.email ?? "—";
+  const userName =
+    session?.user?.name?.trim() || session?.user?.email?.trim() || "—";
 
   function handleLogout() {
     setSidebarOpen(false);
+    // Cierra sesión real (NextAuth) y vuelve al inicio
     signOut({ callbackUrl: "/" });
   }
 
@@ -72,6 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="lg:hidden text-sidebar-foreground"
             onClick={() => setSidebarOpen(false)}
             aria-label="Cerrar menu"
+            type="button"
           >
             <X className="h-5 w-5" />
           </button>
@@ -109,6 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="border-t border-sidebar-border p-3 flex flex-col gap-2">
           <button
             onClick={handleLogout}
+            type="button"
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full"
           >
             <LogOut className="h-4.5 w-4.5 shrink-0" />
@@ -133,6 +137,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="lg:hidden text-foreground"
             onClick={() => setSidebarOpen(true)}
             aria-label="Abrir menu"
+            type="button"
           >
             <Menu className="h-6 w-6" />
           </button>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { exportUserData, deleteUserData } from "@/lib/stubs";
+import { exportUserData } from "@/lib/stubs";
 import {
   User,
   Shield,
@@ -11,10 +11,11 @@ import {
   Bell,
   Info,
   AlertTriangle,
+  Save,
 } from "lucide-react";
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const user = session?.user as
     | { id?: string; name?: string | null; email?: string | null }
     | undefined;
@@ -23,26 +24,128 @@ export default function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteOk, setDeleteOk] = useState<string | null>(null);
+
+  // Profile form state
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileOk, setProfileOk] = useState<string | null>(null);
 
   // Preference toggles (UI only)
   const [notifications, setNotifications] = useState(true);
   const [reminders, setReminders] = useState(true);
   const [warmTone, setWarmTone] = useState(true);
 
+  useEffect(() => {
+    setName(user?.name ?? "");
+    setEmail(user?.email ?? "");
+  }, [user?.name, user?.email]);
+
+  const profileDirty = useMemo(() => {
+    const currentName = user?.name ?? "";
+    const currentEmail = user?.email ?? "";
+    return name !== currentName || email !== currentEmail;
+  }, [name, email, user?.name, user?.email]);
+
   async function handleExport() {
     setExporting(true);
-    await exportUserData();
-    setExporting(false);
+    try {
+      await exportUserData();
+    } finally {
+      setExporting(false);
+    }
     alert("Datos exportados correctamente (mock)");
   }
 
   async function handleDelete() {
     if (deleteConfirm !== "BORRAR") return;
+
     setDeleting(true);
-    await deleteUserData();
-    setDeleting(false);
-    setShowDeleteDialog(false);
-    alert("Datos borrados correctamente (mock)");
+    setDeleteError(null);
+    setDeleteOk(null);
+
+    try {
+      const res = await fetch("/api/user/purge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          confirm: "BORRAR",
+          wipeDataOnly: true, // ✅ no borra cuenta
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const msg =
+          data?.error ??
+          (res.status === 401 ? "No autorizado" : `HTTP ${res.status}`);
+        throw new Error(msg);
+      }
+
+      // UI feedback
+      setDeleteOk("Datos borrados correctamente ✅");
+      setShowDeleteDialog(false);
+      setDeleteConfirm("");
+
+      // (Opcional) refresca cualquier UI que dependa de datos (listados, charts)
+      // En tu caso, los listados cargan por fetch en cliente, así que al volver a esas pantallas ya verán vacío.
+    } catch (e: any) {
+      setDeleteError(e?.message ?? "No se pudieron borrar los datos");
+    } finally {
+      setDeleting(false);
+      setTimeout(() => setDeleteOk(null), 2500);
+    }
+  }
+
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingProfile(true);
+    setProfileError(null);
+    setProfileOk(null);
+
+    try {
+      const nextName = name.trim();
+      const nextEmail = email.trim().toLowerCase();
+
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nextName,
+          email: nextEmail,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const msg =
+          data?.error ??
+          (res.status === 409
+            ? "Ese email ya está en uso"
+            : res.status === 401
+              ? "No autorizado"
+              : `HTTP ${res.status}`);
+        throw new Error(msg);
+      }
+
+      // IMPORTANT: update session so Topbar updates immediately
+      await update({
+        name: data?.name ?? "",
+        email: data?.email ?? "",
+      });
+
+      setProfileOk("Perfil actualizado ✅");
+    } catch (e: any) {
+      setProfileError(e?.message ?? "No se pudo actualizar el perfil");
+    } finally {
+      setSavingProfile(false);
+      setTimeout(() => setProfileOk(null), 2500);
+    }
   }
 
   if (status === "loading") {
@@ -76,6 +179,18 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      {/* ✅ Feedback global (p.ej. tras purgar) */}
+      {deleteError && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {deleteError}
+        </div>
+      )}
+      {deleteOk && (
+        <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {deleteOk}
+        </div>
+      )}
+
       {/* Profile */}
       <section className="mb-6 rounded-xl border border-border bg-card p-6">
         <div className="mb-4 flex items-center gap-2">
@@ -83,39 +198,65 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold text-card-foreground">Perfil</h2>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
+        <form
+          onSubmit={handleSaveProfile}
+          className="grid gap-4 sm:grid-cols-2"
+        >
+          <div className="sm:col-span-1">
             <label className="mb-1.5 block text-sm font-medium text-foreground">
               Nombre
             </label>
             <input
               type="text"
-              defaultValue={user?.name ?? ""}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="Tu nombre"
-              disabled
+              maxLength={100}
             />
-            <p className="mt-1 text-xs text-muted-foreground">
-              (Solo lectura por ahora)
-            </p>
           </div>
 
-          <div>
+          <div className="sm:col-span-1">
             <label className="mb-1.5 block text-sm font-medium text-foreground">
               Email
             </label>
             <input
               type="email"
-              defaultValue={user?.email ?? ""}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="tu@email.com"
-              disabled
+              required
             />
-            <p className="mt-1 text-xs text-muted-foreground">
-              (Solo lectura por ahora)
+          </div>
+
+          <div className="sm:col-span-2 flex flex-col gap-3">
+            {profileError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                {profileError}
+              </div>
+            )}
+
+            {profileOk && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                {profileOk}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={!profileDirty || savingProfile}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-40"
+            >
+              <Save className="h-4 w-4" />
+              {savingProfile ? "Guardando..." : "Guardar cambios"}
+            </button>
+
+            <p className="text-xs text-muted-foreground">
+              El email debe ser único. El nombre es opcional.
             </p>
           </div>
-        </div>
+        </form>
       </section>
 
       {/* Privacy */}
@@ -157,7 +298,11 @@ export default function SettingsPage() {
               </p>
             </div>
             <button
-              onClick={() => setShowDeleteDialog(true)}
+              onClick={() => {
+                setDeleteError(null);
+                setDeleteOk(null);
+                setShowDeleteDialog(true);
+              }}
               className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90"
             >
               <Trash2 className="h-4 w-4" />
@@ -255,11 +400,12 @@ export default function SettingsPage() {
                 Borrar todos los datos
               </h3>
             </div>
+
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Esta acción eliminara permanentemente todas tus entradas de
-              diario, check-ins, conversaciones y preferencias. No se puede
-              deshacer.
+              Esta acción eliminará permanentemente todas tus entradas de
+              diario, check-ins y conversaciones. No se puede deshacer.
             </p>
+
             <div className="mt-4">
               <label className="mb-1.5 block text-sm font-medium text-foreground">
                 {'Escribe "BORRAR" para confirmar'}
@@ -271,16 +417,19 @@ export default function SettingsPage() {
                 className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
+
             <div className="mt-4 flex gap-3">
               <button
                 onClick={() => {
                   setShowDeleteDialog(false);
                   setDeleteConfirm("");
                 }}
-                className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                disabled={deleting}
+                className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
               >
                 Cancelar
               </button>
+
               <button
                 onClick={handleDelete}
                 disabled={deleteConfirm !== "BORRAR" || deleting}

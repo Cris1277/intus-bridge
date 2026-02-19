@@ -14,11 +14,9 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-
       async authorize(credentials) {
         const email = credentials?.email?.toString().trim().toLowerCase();
         const password = credentials?.password?.toString() ?? "";
-
         if (!email || !password) return null;
 
         const user = await prisma.user.findUnique({ where: { email } });
@@ -36,23 +34,35 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
-  pages: {
-    signIn: "/auth/login",
-  },
+  pages: { signIn: "/auth/login" },
 
   callbacks: {
-    // 1) Guardamos el id del usuario dentro del JWT
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // login inicial
       if (user) {
         token.id = (user as any).id;
+        token.name = (user as any).name;
+        token.email = (user as any).email;
       }
+
+      // cuando llamas a useSession().update(...)
+      if (trigger === "update" && session) {
+        // session aquí es el payload que mandas en update()
+        if (typeof (session as any).name === "string")
+          token.name = (session as any).name;
+        if (typeof (session as any).email === "string")
+          token.email = (session as any).email;
+      }
+
       return token;
     },
 
-    // 2) Copiamos el id del JWT a session.user.id
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id as string | undefined;
+        session.user.name = (token.name as string) ?? session.user.name ?? null;
+        session.user.email =
+          (token.email as string) ?? session.user.email ?? null;
       }
       return session;
     },
