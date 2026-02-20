@@ -114,7 +114,7 @@ export default function CheckInPage() {
         {/* Stress slider */}
         <div>
           <label className="mb-2 block text-sm font-medium text-foreground">
-            Nivel de estres: {stress}/10
+            Nivel de estrés: {stress}/10
           </label>
           <input
             type="range"
