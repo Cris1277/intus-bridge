@@ -8,7 +8,7 @@ It provides a private space to check in with emotions, track wellbeing, and acce
 
 ## 🚀 Live Demo
 
-👉 **Coming soon — production link will be added here**
+👉 **IntusBridge (Production):** https://intus-bridge-v4.vercel.app/
 
 ---
 
