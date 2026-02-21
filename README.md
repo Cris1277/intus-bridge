@@ -11,7 +11,11 @@ It provides a private space to check in with emotions, track wellbeing, and acce
 👉 **IntusBridge (Production):** https://intus-bridge-v4.vercel.app/
 
 ---
+## 👤 Test User
 
+- **Username:** usuario1@example.com
+- **Password:** ILoveProgramming*
+---
 ## ✨ Features
 
 * 🧠 Daily emotional check-in with mood tracking
